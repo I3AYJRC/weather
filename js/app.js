@@ -91,15 +91,25 @@
     return cv;
   }
 
-  function renderHourly(list) {
+  function renderHourly(list, now) {
     el.hourly.innerHTML = '';
-    list.forEach(function (h, i) {
+    var items = list.slice(0, 23);
+    if (now) {
+      items = [{
+        hour: 'now',
+        temp: now.temp,
+        kind: now.kind,
+        isDay: now.isDay,
+        pop: now.pop
+      }].concat(items);
+    }
+    items.forEach(function (h, i) {
       var card = document.createElement('div');
-      card.className = 'hour-card' + (i === 0 ? ' is-now' : '');
+      card.className = 'hour-card' + (h.hour === 'now' ? ' is-now' : '');
 
       var time = document.createElement('div');
       time.className = 'h-time';
-      time.textContent = i === 0 ? '现在' : h.hour + '时';
+      time.textContent = h.hour === 'now' ? '现在' : h.hour + '时';
 
       var temp = document.createElement('div');
       temp.className = 'h-temp';
@@ -171,7 +181,7 @@
     el.pop.textContent = Math.round(c.pop) + '%';
 
     PixelIcon.draw(el.nowIcon, c.kind, c.isDay);
-    renderHourly(data.hourly);
+    renderHourly(data.hourly, c);
     renderDaily(data.daily);
 
     Scene.set({ kind: c.kind, isDay: c.isDay, wind: c.wind, intensity: c.intensity });
@@ -179,13 +189,17 @@
     document.title = (data.place || '当前位置') + ' · 像素天气';
   }
 
-  function load(lat, lon, name) {
+  function load(lat, lon, name, tz) {
     busy('正在查询天气…');
-    var placeTask = name ? Promise.resolve(name) : Weather.reverse(lat, lon);
+    var placeTask = name
+      ? Promise.resolve({ name: name, tz: tz })
+      : Weather.reverse(lat, lon);
     Promise.all([Weather.get(lat, lon), placeTask])
       .then(function (res) {
         var data = res[0];
-        data.place = res[1];
+        var place = res[1] || {};
+        data.place = place.name || name || '当前位置';
+        if (place.tz) data.timezone = place.tz;
         render(data);
         hideStart();
         closeSearch();
@@ -243,7 +257,7 @@
       }
       btn.addEventListener('click', function () {
         closeSearch();
-        load(item.lat, item.lon, item.name);
+        load(item.lat, item.lon, item.name, item.tz);
       });
       li.appendChild(btn);
       el.results.appendChild(li);
@@ -258,7 +272,7 @@
           renderResults([]);
           return;
         }
-        load(list[0].lat, list[0].lon, list[0].name);
+        load(list[0].lat, list[0].lon, list[0].name, list[0].tz);
       })
       .catch(function () {
         renderResults([]);
