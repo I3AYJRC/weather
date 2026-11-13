@@ -439,6 +439,222 @@ window.Scene = (function () {
     }
   }
 
+  /* ===== 常驻像素小人：站在左侧地面，呼吸、眨眼、抬头、吐白气 ===== */
+  var HERO_W = 20;
+  var HERO_H = 31;
+  var hero = null;
+
+  var HERO = {
+    hair: '#1a2236',
+    hairHi: '#33405f',
+    hairLit: '#52648f',
+    skin: '#f4d8c4',
+    skinShade: '#e2bda7',
+    eye: '#0f1322',
+    eyeHi: '#eaf3ff',
+    blush: '#dc8a80',
+    coat: '#2f3a5e',
+    coatHi: '#46527e',
+    coatShade: '#202741',
+    zipper: '#8fe6ff',
+    scarf: '#e9b76b',
+    scarfHi: '#ffd98f',
+    scarfShade: '#b98a4b',
+    pants: '#262f4c',
+    shoe: '#0e1220'
+  };
+
+  function resetHero() {
+    hero = {
+      bob: 0,
+      bobTimer: rnd(1, 2.6),
+      blink: 0,
+      nextBlink: rnd(3, 6),
+      look: 0,
+      nextLook: rnd(9, 16),
+      breath: 0,
+      nextBreath: rnd(5, 9),
+      puffTimer: 0,
+      puffs: []
+    };
+  }
+
+  function heroX() {
+    return Math.round(W * 0.2);
+  }
+
+  function updateHero(dt) {
+    if (!hero) return;
+
+    hero.nextBlink -= dt;
+    if (hero.nextBlink <= 0) {
+      hero.blink = 0.13;
+      hero.nextBlink = rnd(3.2, 6.5);
+    }
+    if (hero.blink > 0) hero.blink -= dt;
+
+    hero.nextLook -= dt;
+    if (hero.nextLook <= 0) {
+      hero.look = rnd(1.4, 2.2);
+      hero.nextLook = rnd(10, 17);
+    }
+    if (hero.look > 0) hero.look -= dt;
+
+    hero.bobTimer -= dt;
+    if (hero.bobTimer <= 0) {
+      hero.bob = hero.bob ? 0 : 1;
+      hero.bobTimer = hero.bob ? 0.55 : rnd(2.6, 4.2);
+    }
+
+    var cold = weather.kind === 'snow' || weather.kind === 'fog';
+    hero.nextBreath -= dt;
+    if (hero.nextBreath <= 0) {
+      hero.breath = rnd(1.2, 1.8);
+      hero.nextBreath = cold ? rnd(5.5, 9) : rnd(9, 16);
+      hero.puffTimer = 0;
+    }
+    if (hero.breath > 0) {
+      hero.breath -= dt;
+      hero.puffTimer -= dt;
+      if (hero.puffTimer <= 0) {
+        hero.puffTimer = 0.12;
+        var top = groundY - HERO_H;
+        hero.puffs.push({
+          x: heroX() + 11 + rnd(0, 2),
+          y: top + 14 + (hero.look > 0 ? -2 : 0) + rnd(-1, 1),
+          vx: rnd(12, 18),
+          vy: rnd(-6, -2),
+          life: 2.1,
+          s: Math.random() < 0.45 ? 3 : 2
+        });
+      }
+    }
+
+    for (var i = hero.puffs.length - 1; i >= 0; i--) {
+      var p = hero.puffs[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy -= 1.4 * dt;
+      p.life -= dt;
+      if (p.life <= 0) hero.puffs.splice(i, 1);
+    }
+  }
+
+  function drawHero() {
+    if (!hero) return;
+    var bx = heroX();
+    var top = groundY - HERO_H + hero.bob;
+    var hd = hero.look > 0 ? -2 : 0;
+    var C = HERO;
+    var sway = Math.round(Math.sin(t * 2.1) * 1 + Math.min(3, (weather.wind || 0) * 0.12));
+    var i;
+
+    /* 地面投影 */
+    ctx.globalAlpha = 0.32;
+    px(bx - 1, groundY - 1, HERO_W - 2, 2, '#000000');
+    ctx.globalAlpha = 1;
+
+    /* 腿、鞋 */
+    px(bx + 5, top + 25, 4, 4, C.pants);
+    px(bx + 11, top + 25, 4, 4, C.pants);
+    px(bx + 5, top + 25, 4, 1, C.coatHi);
+    px(bx + 11, top + 25, 4, 1, C.coatHi);
+    px(bx + 4, top + 28, 5, 3, C.shoe);
+    px(bx + 11, top + 28, 5, 3, C.shoe);
+    px(bx + 4, top + 28, 5, 1, '#2a3350');
+    px(bx + 11, top + 28, 5, 1, '#2a3350');
+    px(bx + 4, top + 30, 5, 1, '#05070e');
+    px(bx + 11, top + 30, 5, 1, '#05070e');
+
+    /* 大衣 */
+    px(bx + 4, top + 17, 12, 9, C.coat);
+    px(bx + 3, top + 17, 14, 1, C.coatHi);
+    px(bx + 2, top + 18, 2, 7, C.coatShade);
+    px(bx + 16, top + 18, 2, 7, C.coatShade);
+    px(bx + 3, top + 18, 1, 7, C.coatHi);
+    px(bx + 9, top + 18, 1, 8, C.coatShade);
+    px(bx + 9, top + 19, 1, 2, C.zipper);
+    px(bx + 5, top + 22, 3, 1, C.coatShade);
+    px(bx + 12, top + 22, 3, 1, C.coatShade);
+
+    /* 围巾：围住脖子，右侧垂下随呼吸轻摆 */
+    px(bx + 14 + sway, top + 18, 3, 5, C.scarf);
+    px(bx + 14 + sway, top + 21, 3, 1, C.scarfShade);
+    px(bx + 14 + sway, top + 18, 1, 1, C.scarfHi);
+    px(bx + 4, top + 15, 12, 3, C.scarf);
+    px(bx + 4, top + 15, 12, 1, C.scarfHi);
+    px(bx + 4, top + 16, 3, 1, C.scarfShade);
+    px(bx + 9, top + 16, 2, 1, C.scarfShade);
+    px(bx + 13, top + 16, 2, 1, C.scarfShade);
+
+    /* 脖子与脸 */
+    px(bx + 8, top + 13, 4, 3, C.skinShade);
+    px(bx + 5, top + 7 + hd, 10, 8, C.skin);
+    px(bx + 5, top + 14 + hd, 10, 1, C.skinShade);
+
+    /* 头发：圆润蓬松，中分刘海 */
+    px(bx + 6, top + 1 + hd, 8, 1, C.hairLit);
+    px(bx + 5, top + 2 + hd, 10, 1, C.hair);
+    px(bx + 3, top + 3 + hd, 14, 1, C.hair);
+    px(bx + 2, top + 4 + hd, 16, 2, C.hair);
+    px(bx + 1, top + 6 + hd, 18, 4, C.hair);
+    px(bx + 1, top + 10 + hd, 3, 3, C.hair);
+    px(bx + 16, top + 10 + hd, 3, 3, C.hair);
+    px(bx + 2, top + 13 + hd, 2, 1, C.hair);
+    px(bx + 16, top + 13 + hd, 2, 1, C.hair);
+    px(bx + 5, top + 7 + hd, 4, 2, C.hair);
+    px(bx + 11, top + 7 + hd, 4, 2, C.hair);
+    px(bx + 5, top + 9 + hd, 2, 1, C.hair);
+    px(bx + 13, top + 9 + hd, 2, 1, C.hair);
+    px(bx + 7, top + 2 + hd, 5, 1, C.hairHi);
+    px(bx + 4, top + 5 + hd, 4, 1, C.hairHi);
+    px(bx + 13, top + 5 + hd, 3, 1, C.hairHi);
+    px(bx + 2, top + 7 + hd, 1, 3, C.hairLit);
+    px(bx + 17, top + 7 + hd, 1, 3, C.hairLit);
+
+    /* 眼睛：眨眼、抬头时随头部上移 */
+    if (hero.blink > 0) {
+      px(bx + 7, top + 12 + hd, 2, 1, C.eye);
+      px(bx + 12, top + 12 + hd, 2, 1, C.eye);
+    } else {
+      px(bx + 7, top + 11 + hd, 2, 2, C.eye);
+      px(bx + 12, top + 11 + hd, 2, 2, C.eye);
+      px(bx + 7, top + 11 + hd, 1, 1, C.eyeHi);
+      px(bx + 12, top + 11 + hd, 1, 1, C.eyeHi);
+    }
+    px(bx + 5, top + 13 + hd, 1, 1, C.blush);
+    px(bx + 15, top + 13 + hd, 1, 1, C.blush);
+    px(bx + 9, top + 13 + hd, 2, 1, '#a9756a');
+
+    /* 冷色环境光 + 路灯暖光勾边 */
+    ctx.globalAlpha = 0.3;
+    px(bx + 1, top + 6 + hd, 1, 8, '#5d6fa8');
+    px(bx + 2, top + 18, 1, 7, '#5d6fa8');
+    ctx.globalAlpha = 1;
+    if (lampLit) {
+      ctx.globalAlpha = 0.2;
+      px(bx + 18, top + 6 + hd, 1, 8, '#ffd98a');
+      px(bx + 17, top + 18, 1, 7, '#ffd98a');
+      ctx.globalAlpha = 1;
+    }
+
+    /* 下雪时头发与肩上的积雪 */
+    if (weather.kind === 'snow') {
+      px(bx + 6, top + 1 + hd, 6, 1, '#e8f1ff');
+      px(bx + 4, top + 17, 4, 1, '#e8f1ff');
+      px(bx + 4, groundY - 1, 12, 1, '#cfe0f4');
+    }
+
+    /* 呼出的白气 */
+    for (i = 0; i < hero.puffs.length; i++) {
+      var p = hero.puffs[i];
+      ctx.globalAlpha = Math.max(0, p.life / 2.1) * 0.68;
+      px(p.x, p.y, p.s, p.s, '#e6f2ff');
+    }
+    ctx.globalAlpha = 1;
+  }
+
+
   function drawParticles() {
     var i;
     if (weather.kind === 'snow') {
@@ -508,6 +724,8 @@ window.Scene = (function () {
   function update(dt) {
     var wind = weather.wind || 0;
     var i;
+
+    updateHero(dt);
 
     for (i = 0; i < flakes.length; i++) {
       var f = flakes[i];
@@ -581,6 +799,7 @@ window.Scene = (function () {
     drawFarCity();
     drawCity();
     drawGround();
+    drawHero();
     drawLamp();
     drawForeground();
     drawParticles();
@@ -633,6 +852,7 @@ window.Scene = (function () {
 
   function init() {
     resize();
+    resetHero();
     lastTs = 0;
     cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(loop);
