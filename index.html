@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>像素天气站 · Pixel Weather</title>
+  <meta name="description" content="2D 像素风格天气站：定位后查看当地实时天气，晴天、雨天、下雪、雷暴、雾都以像素动画呈现。" />
+  <meta name="theme-color" content="#05070f" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2305070f'/%3E%3Crect x='6' y='6' width='4' height='4' fill='%23ffd166'/%3E%3Crect x='7' y='2' width='2' height='2' fill='%23ffb347'/%3E%3Crect x='7' y='12' width='2' height='2' fill='%23ffb347'/%3E%3Crect x='2' y='7' width='2' height='2' fill='%23ffb347'/%3E%3Crect x='12' y='7' width='2' height='2' fill='%23ffb347'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <canvas id="scene" aria-hidden="true"></canvas>
+  <div class="crt" aria-hidden="true"></div>
+
+  <div class="content">
+    <header class="hud">
+      <div class="panel chip">
+        <span class="chip-dot" aria-hidden="true"></span>
+        <div class="chip-text">
+          <strong id="city">未定位</strong>
+          <span id="localtime">--:--</span>
+        </div>
+      </div>
+      <div class="hud-actions">
+        <button class="btn" id="btnLocate" type="button">定位</button>
+        <button class="btn" id="btnSearch" type="button">城市</button>
+      </div>
+    </header>
+
+    <main class="panel now-card" id="nowCard" aria-live="polite">
+      <div class="now-row">
+        <canvas id="nowIcon" width="16" height="16" class="now-icon" aria-hidden="true"></canvas>
+        <div class="temp-wrap">
+          <span class="temp" id="temp">--</span><span class="deg">°</span>
+        </div>
+      </div>
+      <p class="desc" id="desc">等待定位…</p>
+      <ul class="facts">
+        <li><span>体感</span><b id="feels">--</b></li>
+        <li><span>湿度</span><b id="humidity">--</b></li>
+        <li><span>风速</span><b id="wind">--</b></li>
+        <li><span>降水</span><b id="pop">--</b></li>
+      </ul>
+    </main>
+
+    <div class="strips">
+      <section class="strip-block">
+        <h2 class="strip-title">未来 24 小时</h2>
+        <div class="strip" id="hourly"></div>
+      </section>
+      <section class="strip-block">
+        <h2 class="strip-title">未来 7 天</h2>
+        <div class="strip" id="daily"></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="overlay" id="startOverlay">
+    <div class="dialog">
+      <h1>PIXEL WEATHER</h1>
+      <p id="startText">允许定位，查看你所在城市的像素天气</p>
+      <div class="loader" id="loader" hidden><i></i><i></i><i></i></div>
+      <div class="dialog-actions">
+        <button class="btn primary" id="btnAllow" type="button">允许定位</button>
+        <button class="btn" id="btnPick" type="button">手动选择城市</button>
+      </div>
+      <p class="hint">定位只用于查询天气，不会上传或保存</p>
+    </div>
+  </div>
+
+  <div class="overlay" id="searchOverlay" hidden>
+    <div class="dialog dialog-left">
+      <div class="dialog-head">
+        <h2>选择城市</h2>
+        <button class="btn small" id="btnCloseSearch" type="button">关闭</button>
+      </div>
+      <form class="search-form" id="searchForm">
+        <input id="cityInput" type="text" placeholder="输入城市名，如 杭州" autocomplete="off" />
+        <button class="btn primary" type="submit">搜索</button>
+      </form>
+      <ul class="results" id="results"></ul>
+      <p class="hint">城市与天气数据来自 Open-Meteo</p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <noscript>
+    <p style="position:fixed;inset:0;display:grid;place-items:center;background:#05070f;color:#eef3ff;font-family:monospace;">请开启 JavaScript 后使用像素天气站</p>
+  </noscript>
+
+  <script src="js/icons.js"></script>
+  <script src="js/scene.js"></script>
+  <script src="js/weather.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
